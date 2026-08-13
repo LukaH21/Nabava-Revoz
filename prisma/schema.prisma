@@ -1,0 +1,146 @@
+// Prisma schema — Nabavna aplikacija (Revoz)
+// Local dev uses SQLite (file). For Vercel production, switch provider to
+// "postgresql" and point DATABASE_URL at a hosted Postgres (Vercel Postgres / Neon).
+// See README.md for the swap steps.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  ODPRTO
+  DODELJENO
+  ZAKLJUCENO
+}
+
+enum FeeType {
+  FIXED
+  PERCENT
+}
+
+model Supplier {
+  id                 String   @id @default(cuid())
+  sapNumber          String?  @unique
+  name               String
+  buyerName          String? // odgovorni nabavnik
+  supplierType       String? // npr. proximite
+  c2b                Boolean  @default(false)
+  homologated        Boolean  @default(true) // vpliva na obračun posredništva
+  country             String?
+  companyCode        String?
+  vatNumber          String?
+  registrationNumber String?
+  address            String?
+  city               String?
+  commercialContact  String?
+  commercialEmail    String?
+  commercialPhone    String?
+  generalEmail       String?
+  orderEmail         String?
+  turnover2024       Float?
+  creditRating       String?
+  dependencyRate     Float?
+  active             Boolean  @default(true)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  familyLinks FamilySupplier[]
+  quotes      Quote[]
+}
+
+// Družinske kode (C2B skupine blaga) po vodilnih nabavnikih — uporabi AI modul
+// za iskanje "kdo je konkurent" znotraj iste skupine.
+model FamilyCode {
+  id              String @id @default(cuid())
+  sapCode         String @unique
+  domain          String?
+  category        String?
+  materialGroup   String?
+  description     String?
+  leadBuyer       String?
+  buyer2          String?
+  buyer3          String?
+  buyer4          String?
+  c2bStatus       String?
+
+  familyLinks FamilySupplier[]
+}
+
+// Povezava dobavitelj <-> družinska koda (kateri dobavitelji ponujajo v tej skupini)
+model FamilySupplier {
+  id           String     @id @default(cuid())
+  familyCodeId String
+  supplierId   String
+  familyCode   FamilyCode @relation(fields: [familyCodeId], references: [id])
+  supplier     Supplier   @relation(fields: [supplierId], references: [id])
+
+  @@unique([familyCodeId, supplierId])
+}
+
+// Posredništvo provizija — stopnje provizije za nehomologirane dobavitelje
+model BrokerageTier {
+  id        String  @id @default(cuid())
+  label     String // npr. "SLO nehomologirani", "Pagras nadzor delovišč"
+  minAmount Float
+  maxAmount Float
+  feeType   FeeType
+  feeValue  Float // znesek (EUR) če FIXED, odstotek če PERCENT
+  sortOrder Int     @default(0)
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  indocCode     String? // npr. 2026_S52_0269
+  name          String
+  description   String?
+  nabavnik      String        @default("Luka Hrovat")
+  status        ProjectStatus @default(ODPRTO)
+  estimatedValue Float?
+  esdcRequired  Boolean       @default(false) // auto: finalPrice > 5000
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  closedAt      DateTime?
+
+  rounds InquiryRound[]
+}
+
+model InquiryRound {
+  id         String   @id @default(cuid())
+  projectId  String
+  roundNumber Int
+  reason     String? // npr. "spremenjene tehnične zahteve"
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  quotes  Quote[]
+
+  @@unique([projectId, roundNumber])
+}
+
+model Quote {
+  id                    String   @id @default(cuid())
+  roundId               String
+  supplierId            String?
+  supplierNameFreeText  String? // če dobavitelj ni v bazi
+  responded             Boolean  @default(false)
+  lineItems             String // JSON: [{label, value, unit}] - fleksibilna struktura (dimenzije, cena/m2, montaža, ...)
+  subtotal              Float    @default(0)
+  brokerageAmount       Float    @default(0)
+  totalWithBrokerage    Float    @default(0)
+  technicallyConfirmed  Boolean  @default(false)
+  commerciallyConfirmed Boolean  @default(false)
+  finalPrice            Float?
+  isWinner              Boolean  @default(false)
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  round    InquiryRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  supplier Supplier?    @relation(fields: [supplierId], references: [id])
+}

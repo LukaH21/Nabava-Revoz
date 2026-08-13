@@ -1,0 +1,1 @@
+ALTER TABLE `brokerage_tiers` ADD `schedule_name` text DEFAULT 'Standard' NOT NULL;
