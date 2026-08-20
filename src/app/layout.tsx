@@ -21,8 +21,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/" className="hover:text-blue-600">
                 Pregled
               </Link>
+              <Link href="/activities" className="hover:text-blue-600">
+                Aktivnosti
+              </Link>
               <Link href="/projects" className="hover:text-blue-600">
                 Analize ponudb
+              </Link>
+              <Link href="/zzn" className="hover:text-blue-600">
+                ZZN PHF
               </Link>
               <Link href="/suppliers" className="hover:text-blue-600">
                 Dobavitelji

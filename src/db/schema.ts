@@ -3,7 +3,7 @@
 // see README.md for the exact steps (schema stays almost identical, drizzle
 // has separate sqlite-core / pg-core column builders).
 
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 
 export const suppliers = sqliteTable("suppliers", {
@@ -88,8 +88,53 @@ export const inquiryRounds = sqliteTable("inquiry_rounds", {
     .references(() => projects.id, { onDelete: "cascade" }),
   roundNumber: integer("round_number").notNull(),
   reason: text("reason"),
+  submissionDeadline: text("submission_deadline"), // rok oddaje ponudb (ISO datum)
+  deadlineExtensions: integer("deadline_extensions").notNull().default(0),
+  closed: integer("closed", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+// Časovnica aktivnosti po projektu (samodejni zapisi + ročne opombe)
+export const activityLog = sqliteTable("activity_log", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  type: text("type", {
+    enum: ["INFO", "DEADLINE", "NOTE", "STATUS", "WINNER", "QUOTE"],
+  })
+    .notNull()
+    .default("INFO"),
+  message: text("message").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ZZN PHF — tedenska tabela naročil na zalogo (uvoz iz Excela + lokalno sledenje statusu)
+export const zznItems = sqliteTable("zzn_items", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  internalOrder: text("internal_order").notNull(), // Interno naročilo
+  itemPosition: integer("item_position").notNull().default(10), // Postavka intern. nar.
+  material: text("material"), // SAP koda materiala
+  materialName: text("material_name"),
+  materialNameFr: text("material_name_fr"),
+  quantity: real("quantity"),
+  unit: text("unit"),
+  createdBy: text("created_by"), // Kreirano (oseba)
+  requestDate: text("request_date"), // Datum zahteve
+  launchDate: text("launch_date"), // Datum lansiranja
+  buyer: text("buyer"), // NABAVNIK
+  replacement: text("replacement"), // Nadomeščanje
+  unprocessed: integer("unprocessed", { mode: "boolean" }).notNull().default(true), // neobdelane
+  comment: text("comment"),
+  supplier: text("supplier"),
+  lastPurchaseDate: text("last_purchase_date"),
+  processed: integer("processed", { mode: "boolean" }).notNull().default(false), // lokalni status: naročeno v SAP
+  processedAt: text("processed_at"),
+  importedAt: text("imported_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (t) => [
+  uniqueIndex("zzn_items_order_position_idx").on(t.internalOrder, t.itemPosition),
+]);
 
 export const quotes = sqliteTable("quotes", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

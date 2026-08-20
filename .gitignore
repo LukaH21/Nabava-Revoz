@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# opuščeno (Prisma zamenjan z Drizzle; onemogočena stara middleware konvencija)
+/prisma
+*.disabled
+
+# lokalna sqlite baza
+*.db
+*.db-journal
+*.db-shm
+*.db-wal

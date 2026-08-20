@@ -15,6 +15,13 @@
       "when": 1786644064523,
       "tag": "0001_wild_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787261115956,
+      "tag": "0002_spicy_justice",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 // Postgres varianta sheme za produkcijo (Vercel Postgres / Neon).
 // Ko si pripravljen na deploy: preimenuj to datoteko v schema.ts (in staro
 // SQLite verzijo v schema.sqlite.ts), glej README.md > "Deploy na Vercel".
-import { pgTable, text, integer, real, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, timestamp, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const projectStatus = pgEnum("project_status", ["ODPRTO", "DODELJENO", "ZAKLJUCENO"]);
@@ -87,8 +87,49 @@ export const inquiryRounds = pgTable("inquiry_rounds", {
     .references(() => projects.id, { onDelete: "cascade" }),
   roundNumber: integer("round_number").notNull(),
   reason: text("reason"),
+  submissionDeadline: text("submission_deadline"),
+  deadlineExtensions: integer("deadline_extensions").notNull().default(0),
+  closed: boolean("closed").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const activityLog = pgTable("activity_log", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  type: text("type", { enum: ["INFO", "DEADLINE", "NOTE", "STATUS", "WINNER", "QUOTE"] })
+    .notNull()
+    .default("INFO"),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const zznItems = pgTable("zzn_items", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  internalOrder: text("internal_order").notNull(),
+  itemPosition: integer("item_position").notNull().default(10),
+  material: text("material"),
+  materialName: text("material_name"),
+  materialNameFr: text("material_name_fr"),
+  quantity: real("quantity"),
+  unit: text("unit"),
+  createdBy: text("created_by"),
+  requestDate: text("request_date"),
+  launchDate: text("launch_date"),
+  buyer: text("buyer"),
+  replacement: text("replacement"),
+  unprocessed: boolean("unprocessed").notNull().default(true),
+  comment: text("comment"),
+  supplier: text("supplier"),
+  lastPurchaseDate: text("last_purchase_date"),
+  processed: boolean("processed").notNull().default(false),
+  processedAt: text("processed_at"),
+  importedAt: timestamp("imported_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("zzn_items_order_position_idx").on(t.internalOrder, t.itemPosition),
+]);
 
 export const quotes = pgTable("quotes", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
