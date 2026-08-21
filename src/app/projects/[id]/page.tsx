@@ -152,7 +152,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <span>{activityIcons[a.type] || "•"}</span>
                 <div>
                   <div className="text-slate-700">{a.message}</div>
-                  <div className="text-slate-400 mt-0.5">{a.createdAt}</div>
+                  <div className="text-slate-400 mt-0.5">{new Date(a.createdAt).toLocaleString("sl-SI")}</div>
                 </div>
               </div>
             ))}

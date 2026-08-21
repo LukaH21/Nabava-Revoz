@@ -45,7 +45,7 @@ export async function createProject(formData: FormData) {
 export async function updateProjectStatus(projectId: string, status: "ODPRTO" | "DODELJENO" | "ZAKLJUCENO") {
   await db
     .update(projects)
-    .set({ status, closedAt: status === "ZAKLJUCENO" ? new Date().toISOString() : null, updatedAt: new Date().toISOString() })
+    .set({ status, closedAt: status === "ZAKLJUCENO" ? new Date() : null, updatedAt: new Date() })
     .where(eq(projects.id, projectId));
   const labels: Record<string, string> = { ODPRTO: "Odprto", DODELJENO: "Dodeljeno", ZAKLJUCENO: "Zaključeno" };
   await logActivity(projectId, "STATUS", `Status spremenjen na "${labels[status]}".`);
@@ -193,7 +193,7 @@ export async function updateQuote(
       commerciallyConfirmed: data.commerciallyConfirmed,
       finalPrice: data.finalPrice,
       notes: data.notes,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
     })
     .where(eq(quotes.id, quoteId));
 

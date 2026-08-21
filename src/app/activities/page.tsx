@@ -162,7 +162,7 @@ export default async function ActivitiesPage() {
                     ) : (
                       "projekt izbrisan"
                     )}{" "}
-                    · {a.createdAt}
+                    · {new Date(a.createdAt).toLocaleString("sl-SI")}
                   </div>
                 </div>
               </div>
