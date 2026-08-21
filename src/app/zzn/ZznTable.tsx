@@ -2,8 +2,6 @@
 
 import { Fragment, useMemo, useState } from "react";
 import {
-  ZZN_STATUS_LABELS,
-  ZznStatus,
   bulkSetStatus,
   reassignZznBuyer,
   restoreZzn,
@@ -12,6 +10,7 @@ import {
   softDeleteZzn,
   toggleProcessed,
 } from "./actions";
+import { ZZN_STATUS_LABELS, type ZznStatus } from "./constants";
 
 type ZznItem = {
   id: string;

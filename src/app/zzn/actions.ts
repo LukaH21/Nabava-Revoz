@@ -4,17 +4,7 @@ import { db } from "@/db";
 import { zznItems } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
-export type ZznStatus = "DODELJENO" | "V_POVPRASEVANJU" | "ZA_NAROCILO" | "V_POTRJEVANJU" | "POTRJENO" | "NAROCENO";
-
-export const ZZN_STATUS_LABELS: Record<ZznStatus, string> = {
-  DODELJENO: "Dodeljeno",
-  V_POVPRASEVANJU: "V povpraševanju",
-  ZA_NAROCILO: "Za naročilo",
-  V_POTRJEVANJU: "V potrjevanju",
-  POTRJENO: "Potrjeno",
-  NAROCENO: "Naročeno",
-};
+import type { ZznStatus } from "./constants";
 
 export async function toggleProcessed(itemId: string, processed: boolean) {
   await db
