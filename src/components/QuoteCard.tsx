@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { updateQuote, deleteQuote, markWinner, type LineItem } from "@/app/actions";
 
 type QuoteData = {
@@ -25,6 +25,7 @@ export default function QuoteCard({
   scheduleNames,
   projectId,
   roundId,
+  onLiveChange,
 }: {
   quote: QuoteData;
   supplierName: string;
@@ -32,6 +33,7 @@ export default function QuoteCard({
   scheduleNames: string[];
   projectId: string;
   roundId: string;
+  onLiveChange?: (quoteId: string, value: number) => void;
 }) {
   const [lineItems, setLineItems] = useState<LineItem[]>(() => {
     try {
@@ -52,6 +54,13 @@ export default function QuoteCard({
   const previewSubtotal = lineItems
     .filter((li) => li.includeInTotal)
     .reduce((sum, li) => sum + (Number(String(li.value).replace(",", ".")) || 0), 0);
+
+  const liveValue = Number(finalPrice.replace(",", ".")) || previewSubtotal;
+
+  useEffect(() => {
+    onLiveChange?.(quote.id, liveValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveValue]);
 
   function updateLine(i: number, patch: Partial<LineItem>) {
     setLineItems((prev) => prev.map((li, idx) => (idx === i ? { ...li, ...patch } : li)));

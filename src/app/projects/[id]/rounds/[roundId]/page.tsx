@@ -6,7 +6,7 @@ import Link from "next/link";
 import { addQuote, extendDeadline, closeRound } from "@/app/actions";
 import { getBrokerageSchedules } from "@/lib/brokerage";
 import SupplierPicker from "@/components/SupplierPicker";
-import QuoteCard from "@/components/QuoteCard";
+import RoundWorkspace from "@/components/RoundWorkspace";
 import { DeadlineBadge } from "@/components/DeadlineBadge";
 import ExportCsvButton from "@/components/ExportCsvButton";
 
@@ -96,25 +96,16 @@ export default async function RoundPage({
         <button className="bg-slate-800 text-white px-4 py-2 rounded-md text-sm hover:bg-slate-900">+ Dodaj ponudbo</button>
       </form>
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {roundQuotes.length === 0 && (
-          <p className="text-slate-400 text-sm">Za ta krog še ni dodanih ponudb. Dodaj dobavitelja zgoraj.</p>
+      <RoundWorkspace
+        quotes={roundQuotes}
+        supplierNames={Object.fromEntries(
+          roundQuotes.map((q) => [q.id, (q.supplierId && supplierById.get(q.supplierId)?.name) || q.supplierNameFreeText || "Neznan dobavitelj"]),
         )}
-        {roundQuotes.map((q) => {
-          const s = q.supplierId ? supplierById.get(q.supplierId) : undefined;
-          return (
-            <QuoteCard
-              key={q.id}
-              quote={q}
-              supplierName={s?.name || q.supplierNameFreeText || "Neznan dobavitelj"}
-              isHomologated={s?.homologated ?? false}
-              scheduleNames={scheduleNames}
-              projectId={projectId}
-              roundId={roundId}
-            />
-          );
-        })}
-      </div>
+        homologatedById={Object.fromEntries(roundQuotes.map((q) => [q.id, q.supplierId ? (supplierById.get(q.supplierId)?.homologated ?? false) : false]))}
+        scheduleNames={scheduleNames}
+        projectId={projectId}
+        roundId={roundId}
+      />
     </div>
   );
 }

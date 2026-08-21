@@ -6,6 +6,14 @@ import { relations } from "drizzle-orm";
 
 export const projectStatus = pgEnum("project_status", ["ODPRTO", "DODELJENO", "ZAKLJUCENO"]);
 export const feeType = pgEnum("fee_type", ["FIXED", "PERCENT"]);
+export const zznStatus = pgEnum("zzn_status", [
+  "DODELJENO",
+  "V_POVPRASEVANJU",
+  "ZA_NAROCILO",
+  "V_POTRJEVANJU",
+  "POTRJENO",
+  "NAROCENO",
+]);
 
 export const suppliers = pgTable("suppliers", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -75,9 +83,26 @@ export const projects = pgTable("projects", {
   status: projectStatus("status").notNull().default("ODPRTO"),
   estimatedValue: real("estimated_value"),
   esdcRequired: boolean("esdc_required").notNull().default(false),
+  technicalContactName: text("technical_contact_name"),
+  technicalContactPhone: text("technical_contact_phone"),
+  technicalContactEmail: text("technical_contact_email"),
+  cdcFileUrl: text("cdc_file_url"),
+  cdcFileName: text("cdc_file_name"),
+  panelConfirmed: boolean("panel_confirmed").notNull().default(false),
+  panelConfirmedAt: timestamp("panel_confirmed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   closedAt: timestamp("closed_at"),
+});
+
+export const projectSuppliers = pgTable("project_suppliers", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  supplierId: text("supplier_id").references(() => suppliers.id),
+  supplierNameFreeText: text("supplier_name_free_text"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const inquiryRounds = pgTable("inquiry_rounds", {
@@ -125,6 +150,12 @@ export const zznItems = pgTable("zzn_items", {
   lastPurchaseDate: text("last_purchase_date"),
   processed: boolean("processed").notNull().default(false),
   processedAt: text("processed_at"),
+  status: zznStatus("status").notNull().default("DODELJENO"),
+  inquirySupplierIds: text("inquiry_supplier_ids").notNull().default("[]"),
+  buyerOverride: text("buyer_override"),
+  manuallyDeleted: boolean("manually_deleted").notNull().default(false),
+  deletedReason: text("deleted_reason"),
+  deletedAt: timestamp("deleted_at"),
   importedAt: timestamp("imported_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -154,6 +185,12 @@ export const quotes = pgTable("quotes", {
 
 export const projectsRelations = relations(projects, ({ many }) => ({
   rounds: many(inquiryRounds),
+  panel: many(projectSuppliers),
+}));
+
+export const projectSuppliersRelations = relations(projectSuppliers, ({ one }) => ({
+  project: one(projects, { fields: [projectSuppliers.projectId], references: [projects.id] }),
+  supplier: one(suppliers, { fields: [projectSuppliers.supplierId], references: [suppliers.id] }),
 }));
 
 export const inquiryRoundsRelations = relations(inquiryRounds, ({ one, many }) => ({

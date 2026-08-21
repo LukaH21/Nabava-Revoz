@@ -1,11 +1,12 @@
 "use server";
 
 import { db } from "@/db";
-import { projects, inquiryRounds, quotes, suppliers, activityLog } from "@/db/schema";
+import { projects, inquiryRounds, quotes, suppliers, activityLog, projectSuppliers } from "@/db/schema";
 import { eq, desc, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { computeBrokerageFee, getBrokerageSchedules } from "@/lib/brokerage";
+import { put } from "@vercel/blob";
 
 async function logActivity(
   projectId: string,
@@ -23,14 +24,23 @@ export async function createProject(formData: FormData) {
   const estimatedValueRaw = String(formData.get("estimatedValue") || "").trim();
   const estimatedValue = estimatedValueRaw ? Number(estimatedValueRaw) : null;
   const submissionDeadline = String(formData.get("submissionDeadline") || "").trim() || null;
+  const technicalContactName = String(formData.get("technicalContactName") || "").trim() || null;
+  const technicalContactPhone = String(formData.get("technicalContactPhone") || "").trim() || null;
+  const technicalContactEmail = String(formData.get("technicalContactEmail") || "").trim() || null;
+  const panelSupplierIds = formData.getAll("panelSupplierIds").map(String).filter(Boolean);
 
   const [project] = await db
     .insert(projects)
-    .values({ name, indocCode, description, estimatedValue })
+    .values({ name, indocCode, description, estimatedValue, technicalContactName, technicalContactPhone, technicalContactEmail })
     .returning();
 
   // prvi krog povpraševanja se ustvari samodejno
   await db.insert(inquiryRounds).values({ projectId: project.id, roundNumber: 1, submissionDeadline });
+
+  if (panelSupplierIds.length > 0) {
+    await db.insert(projectSuppliers).values(panelSupplierIds.map((supplierId) => ({ projectId: project.id, supplierId })));
+    await logActivity(project.id, "INFO", `Panel dobaviteljev določen ob ustvarjanju (${panelSupplierIds.length}).`);
+  }
 
   await logActivity(project.id, "INFO", "Projekt ustvarjen, krog 1 odprt.");
   if (submissionDeadline) {
@@ -40,6 +50,43 @@ export async function createProject(formData: FormData) {
   revalidatePath("/projects");
   revalidatePath("/activities");
   redirect(`/projects/${project.id}`);
+}
+
+export async function addPanelSupplier(projectId: string, supplierId: string | null, supplierNameFreeText: string | null) {
+  if (!supplierId && !supplierNameFreeText) return;
+  await db.insert(projectSuppliers).values({ projectId, supplierId, supplierNameFreeText });
+  const name = supplierId ? (await db.select().from(suppliers).where(eq(suppliers.id, supplierId)))[0]?.name : supplierNameFreeText;
+  await logActivity(projectId, "INFO", `Dodan v panel dobaviteljev: ${name || "dobavitelj"}.`);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function removePanelSupplier(panelId: string, projectId: string) {
+  await db.delete(projectSuppliers).where(eq(projectSuppliers.id, panelId));
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function updateProjectContact(
+  projectId: string,
+  data: { technicalContactName: string | null; technicalContactPhone: string | null; technicalContactEmail: string | null },
+) {
+  await db.update(projects).set(data).where(eq(projects.id, projectId));
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function confirmPanel(projectId: string) {
+  await db.update(projects).set({ panelConfirmed: true, panelConfirmedAt: new Date() }).where(eq(projects.id, projectId));
+  await logActivity(projectId, "INFO", "Panel dobaviteljev potrjen — povpraševanje pripravljeno za pošiljanje.");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/activities");
+}
+
+export async function uploadCdcDocument(projectId: string, formData: FormData) {
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return;
+  const blob = await put(`cdc/${projectId}-${Date.now()}-${file.name}`, file, { access: "public" });
+  await db.update(projects).set({ cdcFileUrl: blob.url, cdcFileName: file.name }).where(eq(projects.id, projectId));
+  await logActivity(projectId, "INFO", `Naložen CDC dokument: ${file.name}.`);
+  revalidatePath(`/projects/${projectId}`);
 }
 
 export async function updateProjectStatus(projectId: string, status: "ODPRTO" | "DODELJENO" | "ZAKLJUCENO") {

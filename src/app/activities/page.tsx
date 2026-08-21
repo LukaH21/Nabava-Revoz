@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { projects, inquiryRounds, quotes, activityLog, zznItems } from "@/db/schema";
-import { eq, desc, ne } from "drizzle-orm";
+import { and, eq, desc, ne } from "drizzle-orm";
 import { DeadlineBadge, daysUntil } from "@/components/DeadlineBadge";
 
 const activityIcons: Record<string, string> = {
@@ -51,7 +51,10 @@ export default async function ActivitiesPage() {
     }
   }
   const esdcPending = allProjects.filter((p) => p.esdcRequired && p.status !== "ZAKLJUCENO");
-  const unprocessedZznCount = (await db.select().from(zznItems).where(eq(zznItems.processed, false))).length;
+  const unprocessedZznCount = (
+    await db.select().from(zznItems).where(and(ne(zznItems.status, "NAROCENO"), eq(zznItems.manuallyDeleted, false)))
+  ).length;
+  const panelNotConfirmed = allProjects.filter((p) => !p.panelConfirmed).length;
 
   const totalQuotesPending = allQuotes.filter((q) => !q.technicallyConfirmed || !q.commerciallyConfirmed).length;
 
@@ -62,7 +65,7 @@ export default async function ActivitiesPage() {
         <p className="text-slate-500 mt-1">Kje je kateri projekt v nabavnem postopku, kaj potrebuje pozornost.</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <div className="border rounded-lg p-4 bg-slate-50 border-slate-200">
           <div className="text-2xl font-semibold text-slate-800">{allProjects.length}</div>
           <div className="text-sm text-slate-600">Aktivnih projektov</div>
@@ -78,6 +81,10 @@ export default async function ActivitiesPage() {
         <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
           <div className="text-2xl font-semibold text-orange-700">{esdcPending.length}</div>
           <div className="text-sm text-orange-700">Čaka ESDC</div>
+        </div>
+        <div className="border rounded-lg p-4 bg-purple-50 border-purple-200">
+          <div className="text-2xl font-semibold text-purple-700">{panelNotConfirmed}</div>
+          <div className="text-sm text-purple-700">Panel še ni potrjen</div>
         </div>
       </div>
 
@@ -111,7 +118,7 @@ export default async function ActivitiesPage() {
 
       {unprocessedZznCount > 0 && (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-md p-3 flex items-center justify-between">
-          <span>{unprocessedZznCount} vrstic v ZZN PHF čaka na naročilo.</span>
+          <span>{unprocessedZznCount} vrstic v ZZN PHF še ni naročenih (razni statusi).</span>
           <Link href="/zzn" className="underline">
             Odpri ZZN PHF →
           </Link>

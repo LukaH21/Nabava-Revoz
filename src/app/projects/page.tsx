@@ -55,6 +55,8 @@ export default async function ProjectsPage({
                 {p.indocCode ? `${p.indocCode} · ` : ""}
                 {p.nabavnik}
                 {p.esdcRequired ? " · ESDC potreben" : ""}
+                {!p.panelConfirmed ? " · panel ni potrjen" : ""}
+                {p.cdcFileUrl ? " · CDC naložen" : ""}
               </div>
             </div>
             <StatusBadge status={p.status} />
