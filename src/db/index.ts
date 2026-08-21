@@ -1,13 +1,14 @@
-// DB client. Local dev: better-sqlite3. Production: swap for a Postgres
-// driver (see README.md) — the drizzle query API stays the same.
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+// Produkcijski DB klient za Vercel Postgres / Neon.
+// Ob deployu: preimenuj to datoteko v index.ts (staro SQLite verzijo v
+// index.sqlite.ts) in namesti "pg": npm install pg && npm install -D @types/pg
+import "dotenv/config";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
-const dbPath = process.env.DATABASE_PATH || "/tmp/nabava-dev.db";
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes("localhost") ? false : { rejectUnauthorized: false },
+});
 
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
-
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(pool, { schema });

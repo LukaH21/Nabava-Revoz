@@ -106,7 +106,7 @@ async function run() {
       comment: s(row[COL.comment]),
       supplier: s(row[COL.supplier]),
       lastPurchaseDate: dateVal(row[COL.lastPurchaseDate]),
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
     };
 
     const existing = await db
