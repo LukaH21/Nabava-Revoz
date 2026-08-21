@@ -19,4 +19,5 @@ export function proxy(req: NextRequest) {
 
 export const config = {
   matcher: ["/((?!api).*)"],
+  runtime: "nodejs",
 };
